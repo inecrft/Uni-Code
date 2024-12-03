@@ -2,6 +2,8 @@
 
 module top(
     input clk,              // 100MHz Basys 3
+    input RsRx,
+    input RsTx,
     input btnC,              // btnC
     input btnU,               // btnU
     input btnD,             // btnD
@@ -11,8 +13,19 @@ module top(
     output Hsync, Vsync,    // VGA connector
     output [3:0] vgaRed,
     output [3:0] vgaGreen,
-    output [3:0] vgaBlue       // DAC, VGA connector
+    output [3:0] vgaBlue      // DAC, VGA connector
     );
+    
+    // UART --------------------------------------------
+    wire dataValid;
+    wire [7:0] data;
+    wire active, done;
+    
+    debounce_chu db_send(.clk(clk), .reset(sw[15]), .sw(btnC), .db_level(), .db_tick(btnC_tick));
+    
+    uartRX rx(clk, RsRx, dataValid, data);
+    uartTX tx(clk, btnC_tick, sw[7:0], active, RsTx, done);
+    // UART --------------------------------------------
    
     // signals
     wire [10:0] w_x;
@@ -27,9 +40,9 @@ module top(
                        .x(w_x), .y(w_y));
     
     // instantiate text generation circuit
-    text_screen_gen tsg(.clk(clk), .reset(sw[15]), .video_on(w_vid_on), .set(btnC),
-                        .up(btnU), .down(btnD), .left(btnL), .right(btnC),
-                        .sw(sw[6:0]), .x(w_x), .y(w_y), .rgb(rgb_next));
+    text_screen_gen tsg(.clk(clk), .reset(sw[15]), .video_on(w_vid_on), .set(dataValid),
+                        .up(btnU), .down(btnD), .left(btnL), .right(dataValid),
+                        .sw(data[6:0]), .x(w_x), .y(w_y), .rgb(rgb_next));
     
     // rgb buffer
     always @(posedge clk)
