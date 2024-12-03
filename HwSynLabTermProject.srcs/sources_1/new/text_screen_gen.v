@@ -35,13 +35,13 @@ module text_screen_gen(
     wire [11:0] addr_r, addr_w;
     wire [6:0] din, dout;
     // 80-by-30 tile map
-    parameter MAX_X = 8;   // 640 pixels / 8 data bits = 80
-    parameter MAX_Y = 30;   // 480 pixels / 16 data rows = 30
+    parameter MAX_X = 40;   // 640 pixels / 8 data bits = 80
+    parameter MAX_Y = 15;   // 480 pixels / 16 data rows = 30
     // cursor
     reg [6:0] cur_x_reg;
     reg [6:0] cur_x_next;
     reg [4:0] cur_y_reg;
-    wire [4:0] cur_y_next;
+    reg [4:0] cur_y_next;
     wire move_xl_tick, move_yu_tick, move_xr_tick, move_yd_tick, cursor_on;
     // delayed pixel count
     reg [10:0] pix_x1_reg, pix_x2_reg;
@@ -98,22 +98,37 @@ module text_screen_gen(
     
     always @ (negedge move_xr_tick)
     begin
-        cur_x_next = (cur_x_reg == MAX_X - 1) ? 0 : cur_x_reg + 1;
+        if (din == 7'b0001010) begin
+            cur_x_next = 0;
+            cur_y_next = (cur_y_reg == MAX_Y - 1) ? 0 : cur_y_reg + 1;
+        end else if (cur_x_reg == MAX_X - 1 && cur_y_reg == MAX_Y - 1)
+        begin
+            cur_x_next = 0;
+            cur_y_next = 0;
+        end else if (cur_x_reg == MAX_X - 1)
+        begin
+            cur_x_next = 0;
+            cur_y_next = cur_y_reg + 1;
+        end else
+        begin
+            cur_x_next = cur_x_reg + 1;
+            cur_y_next = cur_y_reg;
+        end
     end
 //    assign cur_x_next = (move_xr_tick && (cur_x_reg == MAX_X - 1)) || (move_xl_tick && (cur_x_reg == 0)) ? 0 :    
 //                        (move_xr_tick) ? cur_x_reg + 1 :    // move right
 ////                        (move_xl_tick) ? cur_x_reg - 1 :    // move left
 //                        cur_x_reg;                          // no move
                                            
-    assign cur_y_next = (move_yu_tick && (cur_y_reg == 0)) || (move_yd_tick && (cur_y_reg == MAX_Y - 1)) ? 0 :    
+//    assign cur_y_next = (move_yu_tick && (cur_y_reg == 0)) || (move_yd_tick && (cur_y_reg == MAX_Y - 1)) ? 0 :    
 //                        (move_yu_tick) ? cur_y_reg - 1 :    // move up                        
 //                        (move_yd_tick) ? cur_y_reg + 1 :    // move down
-                        cur_y_reg;                          // no move           
+//                        cur_y_reg;                          // no move           
     
     // object signals
     // green over black and reversed video for cursor
-    assign text_rgb = (ascii_bit) ? 12'h0F0 : 12'h000;
-    assign text_rev_rgb = (ascii_bit) ? 12'h000 : 12'h0F0;
+    assign text_rgb = (ascii_bit) ? 12'hFFF : 12'h000;
+    assign text_rev_rgb = (ascii_bit) ? 12'h000 : 12'hFFF;
     // use delayed coordinates for comparison
     assign cursor_on = (pix_y2_reg[8:4] == cur_y_reg) &&
                        (pix_x2_reg[9:3] == cur_x_reg);
