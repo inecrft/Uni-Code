@@ -58,7 +58,7 @@ module text_screen_gen(
     // instantiate the ascii / font rom
     ascii_rom a_rom(.clk(clk), .addr(rom_addr), .data(font_word));
     // instantiate dual-port video RAM (2^12-by-7)
-    dual_port_ram dp_ram(.clk(clk), .we(we), .addr_a(addr_w), .addr_b(addr_r),
+    dual_port_ram dp_ram(.clk(clk), .we(set), .addr_a(addr_w), .addr_b(addr_r),
                          .din_a(din), .dout_a(), .dout_b(dout));
     
     // registers
@@ -96,11 +96,11 @@ module text_screen_gen(
     assign ascii_bit = font_word[~bit_addr];
     // new cursor position
     
-    always @ (negedge move_xr_tick)
+    always @ (negedge right)
     begin
         if (din == 7'b0001010) begin
             cur_x_next = 0;
-            cur_y_next = (cur_y_reg == MAX_Y - 1) ? 0 : cur_y_reg + 1;
+            cur_y_next = cur_y_reg + 1; //(cur_y_reg == MAX_Y - 1) ? 0 : cur_y_reg + 1;
         end else if (cur_x_reg == MAX_X - 1 && cur_y_reg == MAX_Y - 1)
         begin
             cur_x_next = 0;
