@@ -8,6 +8,8 @@
 // Adapted for use on Basys 3 FPGA with Xilinx Artix-7
 // by: David J. Marion aka FPGA Dude
 
+//Fix right and set
+
 module text_screen_gen(
     input clk, reset,
     input video_on,
@@ -44,8 +46,8 @@ module text_screen_gen(
     reg [4:0] cur_y_next;
     wire move_xl_tick, move_yu_tick, move_xr_tick, move_yd_tick, cursor_on;
     // delayed pixel count
-    reg [10:0] pix_x1_reg, pix_x2_reg;
-    reg [9:0] pix_y1_reg, pix_y2_reg;
+    reg [10:0] pix_x1_reg, pix_x2_reg, uni_x;
+    reg [9:0] pix_y1_reg, pix_y2_reg, uni_y;
     // object output signals
     wire [11:0] text_rgb, text_rev_rgb;
     
@@ -58,7 +60,7 @@ module text_screen_gen(
     // instantiate the ascii / font rom
     ascii_rom a_rom(.clk(clk), .addr(rom_addr), .data(font_word));
     // instantiate dual-port video RAM (2^12-by-7)
-    dual_port_ram dp_ram(.clk(clk), .we(we), .addr_a(addr_w), .addr_b(addr_r),
+    dual_port_ram dp_ram(.clk(clk), .we(set), .addr_a(addr_w), .addr_b(addr_r),
                          .din_a(din), .dout_a(), .dout_b(dout));
     
     // registers
@@ -72,6 +74,8 @@ module text_screen_gen(
             pix_y2_reg <= 0;
         end    
         else begin
+            uni_x <= pix_x2_reg - 350;
+            uni_y <= pix_y2_reg - 200;
             cur_x_reg <= cur_x_next;
             cur_y_reg <= cur_y_next;
             pix_x1_reg <= x;
@@ -96,7 +100,7 @@ module text_screen_gen(
     assign ascii_bit = font_word[~bit_addr];
     // new cursor position
     
-    always @ (negedge move_xr_tick)
+    always @ (negedge right)
     begin
         if (din == 7'b0001010) begin
             cur_x_next = 0;
@@ -115,15 +119,6 @@ module text_screen_gen(
             cur_y_next = cur_y_reg;
         end
     end
-//    assign cur_x_next = (move_xr_tick && (cur_x_reg == MAX_X - 1)) || (move_xl_tick && (cur_x_reg == 0)) ? 0 :    
-//                        (move_xr_tick) ? cur_x_reg + 1 :    // move right
-////                        (move_xl_tick) ? cur_x_reg - 1 :    // move left
-//                        cur_x_reg;                          // no move
-                                           
-//    assign cur_y_next = (move_yu_tick && (cur_y_reg == 0)) || (move_yd_tick && (cur_y_reg == MAX_Y - 1)) ? 0 :    
-//                        (move_yu_tick) ? cur_y_reg - 1 :    // move up                        
-//                        (move_yd_tick) ? cur_y_reg + 1 :    // move down
-//                        cur_y_reg;                          // no move           
     
     // object signals
     // green over black and reversed video for cursor
@@ -133,9 +128,17 @@ module text_screen_gen(
     assign cursor_on = (pix_y2_reg[8:4] == cur_y_reg) &&
                        (pix_x2_reg[9:3] == cur_x_reg);
     // rgb multiplexing circuit
+    wire unic;
+    unicornROM unROM(clk, {uni_y[7:3], uni_x[7:3]}, unic); 
     always @*
         if(~video_on)
             rgb = 12'h000;     // blank
+        else if (pix_x2_reg == 336 && pix_y2_reg >=0 && pix_y2_reg<=256)
+            rgb = 12'hFFF;
+        else if (pix_x2_reg >=0 && pix_x2_reg <= 336 && pix_y2_reg ==256)
+            rgb = 12'hFFF;
+        else if (pix_x2_reg >=350 && pix_x2_reg <= 606 && pix_y2_reg >=200 &&pix_y2_reg <= 456)
+            rgb = (unic == 1) ? 12'hFFF : 12'h000;
         else
             if(cursor_on)
                 rgb = text_rev_rgb;

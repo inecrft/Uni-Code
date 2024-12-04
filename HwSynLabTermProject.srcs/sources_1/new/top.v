@@ -3,7 +3,7 @@
 module top(
     input clk,              // 100MHz Basys 3
     input RsRx,
-    input RsTx,
+    output RsTx,
     input btnC,              // btnC
     input btnU,               // btnU
     input btnD,             // btnD
