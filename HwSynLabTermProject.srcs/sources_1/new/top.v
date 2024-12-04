@@ -5,10 +5,6 @@ module top(
     input RsRx,
     output RsTx,
     input btnC,              // btnC
-    input btnU,               // btnU
-    input btnD,             // btnD
-    input btnL,             // btnL
-    input btnR,            // btnR
     input [15:0] sw,         // sw[6:0] sets ASCII value
     output Hsync, Vsync,    // VGA connector
     output [3:0] vgaRed,
@@ -41,7 +37,6 @@ module top(
     
     // instantiate text generation circuit
     text_screen_gen tsg(.clk(clk), .reset(sw[15]), .video_on(w_vid_on), .set(dataValid),
-                        .up(btnU), .down(btnD), .left(btnL), .right(dataValid),
                         .sw(data[6:0]), .x(w_x), .y(w_y), .rgb(rgb_next));
     
     // rgb buffer

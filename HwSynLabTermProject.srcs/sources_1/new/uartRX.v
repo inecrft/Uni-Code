@@ -27,7 +27,7 @@ module uartRX
    output       o_Rx_DV,
    output [7:0] o_Rx_Byte
    );
-  parameter CLKS_PER_BIT = 868; //Brate = 115200 clock = 100 MHz
+  parameter CLKS_PER_BIT = 10417; //Brate = 115200 clock = 100 MHz
   parameter s_IDLE         = 3'b000;
   parameter s_RX_START_BIT = 3'b001;
   parameter s_RX_DATA_BITS = 3'b010;
@@ -37,7 +37,7 @@ module uartRX
   reg           r_Rx_Data_R = 1'b1;
   reg           r_Rx_Data   = 1'b1;
    
-  reg [9:0]     r_Clock_Count = 0;
+  reg [13:0]     r_Clock_Count = 0;
   reg [2:0]     r_Bit_Index   = 0; //8 bits total
   reg [7:0]     r_Rx_Byte     = 0;
   reg           r_Rx_DV       = 0;

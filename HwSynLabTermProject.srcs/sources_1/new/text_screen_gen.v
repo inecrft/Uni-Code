@@ -12,10 +12,7 @@ module text_screen_gen(
     input clk, reset,
     input video_on,
     input set,
-    input up,
-    input down,
-    input left,
-    input right,
+//    input right,
     input [6:0] sw,
     input [10:0] x,
     input [9:0] y,
@@ -31,7 +28,7 @@ module text_screen_gen(
     wire [7:0] font_word;
     wire ascii_bit;
     // tile RAM
-    wire we;                    // write enable
+//    wire we;                    // write enable
     wire [11:0] addr_r, addr_w;
     wire [6:0] din, dout;
     // 80-by-30 tile map
@@ -42,7 +39,8 @@ module text_screen_gen(
     reg [6:0] cur_x_next;
     reg [4:0] cur_y_reg;
     reg [4:0] cur_y_next;
-    wire move_xl_tick, move_yu_tick, move_xr_tick, move_yd_tick, cursor_on;
+    wire move_xl_tick, move_yu_tick, move_yd_tick;  
+    wire move_xr_tick, cursor_on;
     // delayed pixel count
     reg [10:0] pix_x1_reg, pix_x2_reg;
     reg [9:0] pix_y1_reg, pix_y2_reg;
@@ -51,14 +49,11 @@ module text_screen_gen(
     
     // body
     // instantiate debounce for four buttons
-    debounce_chu db_left(.clk(clk), .reset(reset), .sw(left), .db_level(), .db_tick(move_xl_tick));
-    debounce_chu db_up(.clk(clk), .reset(reset), .sw(up), .db_level(), .db_tick(move_yu_tick));
-    debounce_chu db_down(.clk(clk), .reset(reset), .sw(down), .db_level(), .db_tick(move_yd_tick));
     debounce_chu db_right(.clk(clk), .reset(reset), .sw(right), .db_level(), .db_tick(move_xr_tick));
     // instantiate the ascii / font rom
     ascii_rom a_rom(.clk(clk), .addr(rom_addr), .data(font_word));
     // instantiate dual-port video RAM (2^12-by-7)
-    dual_port_ram dp_ram(.clk(clk), .we(set), .addr_a(addr_w), .addr_b(addr_r),
+    dual_port_ram dp_ram(.clk(clk), .we(set), .reset(reset), .addr_a(addr_w), .addr_b(addr_r),
                          .din_a(din), .dout_a(), .dout_b(dout));
     
     // registers
@@ -82,7 +77,6 @@ module text_screen_gen(
     
     // tile RAM write
     assign addr_w = {cur_y_reg, cur_x_reg};
-    debounce_chu db_set(.clk(clk), .reset(reset), .sw(set), .db_level(), .db_tick(we));
     assign din = sw;
     // tile RAM read
     // use nondelayed coordinates to form tile RAM address
@@ -96,11 +90,11 @@ module text_screen_gen(
     assign ascii_bit = font_word[~bit_addr];
     // new cursor position
     
-    always @ (negedge right)
+    always @ (posedge set)
     begin
         if (din == 7'b0001010) begin
             cur_x_next = 0;
-            cur_y_next = cur_y_reg + 1; //(cur_y_reg == MAX_Y - 1) ? 0 : cur_y_reg + 1;
+            cur_y_next = (cur_y_reg == MAX_Y - 1) ? 0 : cur_y_reg + 1;
         end else if (cur_x_reg == MAX_X - 1 && cur_y_reg == MAX_Y - 1)
         begin
             cur_x_next = 0;
@@ -114,16 +108,7 @@ module text_screen_gen(
             cur_x_next = cur_x_reg + 1;
             cur_y_next = cur_y_reg;
         end
-    end
-//    assign cur_x_next = (move_xr_tick && (cur_x_reg == MAX_X - 1)) || (move_xl_tick && (cur_x_reg == 0)) ? 0 :    
-//                        (move_xr_tick) ? cur_x_reg + 1 :    // move right
-////                        (move_xl_tick) ? cur_x_reg - 1 :    // move left
-//                        cur_x_reg;                          // no move
-                                           
-//    assign cur_y_next = (move_yu_tick && (cur_y_reg == 0)) || (move_yd_tick && (cur_y_reg == MAX_Y - 1)) ? 0 :    
-//                        (move_yu_tick) ? cur_y_reg - 1 :    // move up                        
-//                        (move_yd_tick) ? cur_y_reg + 1 :    // move down
-//                        cur_y_reg;                          // no move           
+    end          
     
     // object signals
     // green over black and reversed video for cursor
