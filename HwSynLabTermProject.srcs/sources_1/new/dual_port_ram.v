@@ -16,30 +16,36 @@ module dual_port_ram
     
     // Infer the RAM as block ram
     (* ram_style = "block" *) reg [DATA_SIZE-1:0] ram [2**ADDR_SIZE-1:0];
+    reg valid [2**ADDR_SIZE-1:0];
     
     reg [ADDR_SIZE-1:0] addr_a_reg, addr_b_reg;
     reg state;
-    singlePulser sp(reset, clk, reset_sp);
+    wire n;
+    assign n = 0;
+    debounce_chu db_reset(.clk(clk), .reset(n), .sw(reset), .db_level(), .db_tick(reset_tick));
+
+    always @ (posedge reset_tick)
+    begin
+        state <= ~state;
+    end
     
-    integer i;
-    integer j;
     // body
     always @(posedge clk) begin
-//        if (reset_sp)
-//            state <= ~state;
-//        else 
-        if(we)      // write operation
+        if(we) begin      // write operation
             ram[addr_a] <= din_a;
-//            ram[addr_a] <= {state, din_a};
+            valid[addr_a] <= state;
+        end else if (valid[addr_b_reg] != state) begin
+            ram[addr_b_reg] <= 0;
+        end
             
         addr_a_reg <= addr_a;
         addr_b_reg <= addr_b;
     end
     
-    // two read operations        
-//    assign dout_a = (ram[addr_a_reg][DATA_SIZE] == state) ? ram[addr_a_reg] : 0;
+    // two read operations
+//    assign dout_a = (valid[addr_a_reg] == state) ? ram[addr_a_reg] : 0;
     assign dout_a = ram[addr_a_reg];
     assign dout_b = ram[addr_b_reg];
-//    assign dout_b = (ram[addr_b_reg][DATA_SIZE] == state) ? ram[addr_b_reg] : 0;
+//    assign dout_b = (valid[addr_b_reg] == state) ? ram[addr_b_reg] : 0;
     
 endmodule
