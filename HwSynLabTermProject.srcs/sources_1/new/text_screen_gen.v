@@ -46,6 +46,8 @@ module text_screen_gen(
     reg [9:0] pix_y1_reg, pix_y2_reg;
     // object output signals
     wire [11:0] text_rgb, text_rev_rgb;
+    reg [10:0] uni_x;
+    reg [9:0] uni_y;
     
     // body
     // instantiate debounce for four buttons
@@ -65,6 +67,8 @@ module text_screen_gen(
             pix_x2_reg <= 0;
             pix_y1_reg <= 0;
             pix_y2_reg <= 0;
+            uni_x <= 0;
+            uni_y <= 0;
         end    
         else begin
             cur_x_reg <= cur_x_next;
@@ -73,6 +77,8 @@ module text_screen_gen(
             pix_x2_reg <= pix_x1_reg;
             pix_y1_reg <= y;
             pix_y2_reg <= pix_y1_reg;
+            uni_x <= pix_x2_reg - 350;
+            uni_y <= pix_y2_reg - 200;
         end
     
     // tile RAM write
@@ -118,9 +124,17 @@ module text_screen_gen(
     assign cursor_on = (pix_y2_reg[8:4] == cur_y_reg) &&
                        (pix_x2_reg[9:3] == cur_x_reg);
     // rgb multiplexing circuit
+    wire unic;
+    unicornROM unROM(clk, {uni_y[7:3], uni_x[7:3]}, unic);
     always @*
         if(~video_on)
             rgb = 12'h000;     // blank
+        else if (pix_x2_reg == 336 && pix_y2_reg >=0 && pix_y2_reg<=256)
+            rgb = 12'hFFF;
+        else if (pix_x2_reg >=0 && pix_x2_reg <= 336 && pix_y2_reg ==256)
+            rgb = 12'hFFF;
+        else if (pix_x2_reg >=350 && pix_x2_reg <= 606 && pix_y2_reg >=200 &&pix_y2_reg <= 456)
+            rgb = (unic == 1) ? 12'hFFF : 12'h000;
         else
             if(cursor_on)
                 rgb = text_rev_rgb;
