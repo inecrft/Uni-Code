@@ -96,9 +96,12 @@ module text_screen_gen(
     assign ascii_bit = font_word[~bit_addr];
     // new cursor position
     
-    always @ (posedge set)
+    always @ (posedge set or posedge reset)
     begin
-        if (din == 7'b0001010) begin
+        if (reset) begin
+            cur_x_next <= 0;
+            cur_y_next <= 0;
+        end else if (din == 7'b0001010) begin
             cur_x_next = 0;
             cur_y_next = (cur_y_reg == MAX_Y - 1) ? 0 : cur_y_reg + 1;
         end else if (cur_x_reg == MAX_X - 1 && cur_y_reg == MAX_Y - 1)
